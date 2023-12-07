@@ -1,0 +1,8 @@
+eclipse.preferences.version=1
+encoding//Debug/debug.c=GBK
+encoding//Peripheral/inc/ch32v00x.h=GBK
+encoding//Peripheral/inc/ch32v00x_i2c.h=GBK
+encoding//Peripheral/src/ch32v00x_i2c.c=GBK
+encoding//User/main.c=GBK
+encoding//User/ssd1306/ssd1306.c=GBK
+encoding//User/ssd1306/ssd1306.h=GBK
