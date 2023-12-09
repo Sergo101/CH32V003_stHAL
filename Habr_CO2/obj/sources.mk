@@ -29,5 +29,6 @@ HAL \
 Peripheral/src \
 Startup \
 User \
+User/scd4x \
 User/ssd1306 \
 

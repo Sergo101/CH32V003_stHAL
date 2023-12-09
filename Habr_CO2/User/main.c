@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "SSD1306.h"
+#include "scd4x.h"
 
 /* Global define */
 
@@ -54,7 +55,6 @@ void GPIO_Toggle_INIT(void)
  */
 int main(void)
 {
-    u8 i = 0;
 
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
     SystemCoreClockUpdate();
@@ -70,24 +70,62 @@ int main(void)
     Systick_Init ();
     HAL_I2C_Init(400000, 0xEE);
     SSD1306_Init();
+    scd4x_Init();
 
+    SSD1306_Fill(SSD1306_COLOR_BLACK);
+           sprintf (buff,"Dushnometr");
+           SSD1306_GotoXY(0, 0);
+           SSD1306_Puts(buff, &Font_11x18, SSD1306_COLOR_WHITE);
+           SSD1306_UpdateScreen();
+           delay_1ms(1500);
 
-    while(1)
+uint16_t co2_conc = 0, rh = 0;
+int16_t temp = 0;
+uint32_t time = 0, prev_time = 0;
+uint8_t sensor_disconnect = 0;
+uint8_t err_code;
+uint8_t data[32];
+
+while(1)
     {
+        err_code = scd4x_is_data_ready();
+        if (err_code == 0) //data ready
+            {
+                 scd4x_read_measurement(&co2_conc, &temp, &rh);
+                 time = (get_tick() - prev_time)/100;
+                 prev_time = get_tick();
+
+            }
+        else if (err_code != SCD4x_DATA_NOT_READY) //i2c bus error
+            {
+                 sensor_disconnect = 1;
+            }
+
+        if (sensor_disconnect)//sensor reinit
+            {
+                if (scd4x_Init() == 0){
+                    sensor_disconnect = 0;
+                    }
+            }
+
         SSD1306_Fill(SSD1306_COLOR_BLACK);
-        sprintf (buff,"Blink OFF");
-        SSD1306_GotoXY(0, 0);
-        SSD1306_Puts(buff, &Font_11x18, SSD1306_COLOR_WHITE);
-        SSD1306_UpdateScreen();
-        delay_1ms(500);
 
-        SSD1306_Fill(SSD1306_COLOR_WHITE);
-        sprintf (buff,"Blink ON");
+        sprintf (data, "CO2:%dppm", co2_conc);
         SSD1306_GotoXY(0, 0);
-        SSD1306_Puts(buff, &Font_11x18, SSD1306_COLOR_BLACK);
-        SSD1306_UpdateScreen();
-        delay_1ms(500);
+        SSD1306_Puts(data, &Font_11x18, SSD1306_COLOR_WHITE);
 
-        GPIO_WriteBit(GPIOD, GPIO_Pin_3, (i == 0) ? (i = Bit_SET) : (i = Bit_RESET));
+        sprintf (data, "RH:%d.%d  T:%d'C",rh/10, rh%10, temp);
+        SSD1306_GotoXY(0, 25);
+        SSD1306_Puts(data, &Font_7x10, SSD1306_COLOR_WHITE);
+
+        sprintf (data, "time:%d.%d d/c:%d",time/10, time%10, sensor_disconnect);
+        SSD1306_GotoXY(0, 40);
+        SSD1306_Puts(data, &Font_7x10, SSD1306_COLOR_WHITE);
+
+        SSD1306_UpdateScreen();
+        delay_1ms(10);
+        GPIO_WriteBit(GPIOD, GPIO_Pin_3,Bit_RESET);
+        delay_1ms(1);
+        GPIO_WriteBit(GPIOD, GPIO_Pin_3,Bit_SET);
     }
 }
